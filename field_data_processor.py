@@ -2,6 +2,7 @@ from sqlalchemy import create_engine, text
 import logging
 import pandas as pd
 from data_ingestion import query_data, create_db_engine, read_from_web_CSV
+from helper_functions import clean_name
 
 logger = logging.getLogger('field_data_processor')
 
@@ -65,9 +66,11 @@ class FieldDataProcessor:
 
         self.logger.info(f"Swapped columns: {column1} with {column2}")
     
-    def apply_corrections(self, column_name='Crop_type', abs_column='Elevation'):
+    def apply_corrections(self, crop_column='Crop_type', abs_column='Elevation', location_column='Location'):
         self.df[abs_column] = self.df[abs_column].abs()
-        self.df[column_name] = self.df[column_name].apply(lambda crop: self.values_to_rename.get(crop, crop))
+        self.df[crop_column] = self.df[crop_column].apply(lambda crop: self.values_to_rename.get(crop, crop))
+        self.df[crop_column] = self.df[crop_column].apply(clean_name)
+        self.df[location_column] = self.df[location_column].apply(clean_name)
 
     def weather_station_mapping(self):
         return read_from_web_CSV(self.weather_map_data)
