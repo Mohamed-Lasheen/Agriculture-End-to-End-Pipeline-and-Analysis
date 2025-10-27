@@ -27,7 +27,8 @@ def clean_name(name):
 
 def clean_titles_dictionary(titles):
     for key, value in titles.items():
-        titles[key] = clean_name(value)
+        if value != np.float64(0.5779643636557995):
+            titles[key] = clean_name(value)
     return titles
 
 def count_rows(n_groups: int, n_cols: int=2):

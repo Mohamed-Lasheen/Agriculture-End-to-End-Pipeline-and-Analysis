@@ -5,7 +5,7 @@ import logging
 from scipy.stats import ttest_ind
 from field_data_processor import FieldDataProcessor
 from weather_data_processor import WeatherDataProcessor
-from data_analysis import univariate_analysis, bivariate_analysis
+from data_analysis import univariate_analysis, bivariate_analysis, multivariate_analysis
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
@@ -58,7 +58,8 @@ print(field_df.info())
 #bivariate_analysis
 
 print(field_df.head())
-univariate_analysis(field_df)
-#bivariate_analysis(field_df)
+#univariate_analysis(field_df)
+bivariate_analysis(field_df)
+#multivariate_analysis(field_df)
 print(field_df.describe())
 

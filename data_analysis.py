@@ -5,140 +5,237 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from helper_functions import create_subplots, count_rows, clean_name, clean_titles_dictionary, filter_field_data
 
+
 #region Plots
 
-def bivariate_violin_plots(df, x, y, n_rows: int = 2, n_cols: int = 1):
+def violin_plots(df, mode: str = None, x: str = "", y: str = "", z: str = ""):
+    """
+    Create violin plots for univariate, bivariate, or multivariate analysis.
+    
+    Args:
+        df: DataFrame containing the data
+        mode: Analysis type - 'univariate', 'bivariate', or 'multivariate'
+        x: Variable for x-axis
+        y: Variable for y-axis 
+        z: Variable for grouping 
+    """
+    titles = {"x": x}
+    fig = None
+    if mode == "U":
+        titles = clean_titles_dictionary(titles)
+        fig = go.Figure()
+        fig.add_trace(go.Violin(y=df[x], showlegend=False, name=x))
+        title = f"Understanding the Spread of {titles['x']}"
+
+    elif mode == "B":
+        titles.update({"y": y})
+        titles = clean_titles_dictionary(titles)
+        unique_groups = df[x].unique()
+        fig = go.Figure() 
+        for index, item in enumerate(unique_groups):
+            data = go.Violin(
+                x=df[x][df[x] == item],
+                y=df[y][df[x] == item],
+                name=clean_name(str(item)),
+            )
+            fig.add_trace(data)
+        title = f"Distribution of {titles['y']} by {titles['x']}"
+        
+    elif mode == "M":
+        titles.update({"y": y, "z": z})
+        titles = clean_titles_dictionary(titles)
+        fig = px.violin(df, x=x, y=y, color=z)
+        title = f"How {titles['z']} Affects {titles['y']} Across Different {titles['x']} Groups"
+    
+    fig.update_traces(box_visible=True, meanline_visible=True)
+    fig.update_layout(
+        height=600,
+        title=title,
+        showlegend=True
+    )
+    fig.update_xaxes(title_text=titles['x'])
+    fig.update_yaxes(title_text=titles['y'] if mode != "U" else titles['x'])
+    return fig
+    
+def count_plots(df, mode: str = None, x: str = "", y: str = "", z: str = "", order_dict: dict = None):
+    """
+    Create count plots for univariate, bivariate, or multivariate analysis.
+    
+    Args:
+        df: DataFrame containing the data
+        x: Variable for x-axis
+        y: Variable for y-axis
+        z: Variable for grouping
+        mode: Analysis type - 'univariate', 'bivariate', or 'multivariate'
+        """
+    titles = {"x": x}
+    fig = None
+    if mode == "U":
+        titles = clean_titles_dictionary(titles)
+        fig = px.histogram(df, 
+                    x=x, 
+                    text_auto=True, 
+                    color_discrete_sequence=px.colors.qualitative.Set2)
+        title = f"Frequency of {titles['x']}"
+
+    elif mode == "B":
+        titles.update({"y": y})
+        titles = clean_titles_dictionary(titles)
+        fig = px.histogram(df, 
+                        x=x, 
+                        text_auto=True, 
+                        color=y,
+                        barmode='stack',
+                        color_discrete_sequence=px.colors.qualitative.Set2)
+        title = f"Frequency of {titles['y']} by {titles['x']}"
+        
+    fig.update_layout(
+        height=600,
+        title=title,
+        showlegend=True
+    )
+    fig.update_xaxes(title_text=titles['x'], categoryorder="total descending")
+    fig.update_yaxes(title_text=titles['y'] if mode != "U" else titles['x'])
+    return fig
+        
+def scatter_plots(df, mode: str = None, x: str = "", y: str = "", z: str = "", order_dict: dict = None):
     titles = {"x": x, "y": y}
-    titles = clean_titles_dictionary(titles)
-    unique_groups = df[x].unique()
-    fig = go.Figure() 
-    for index, item in enumerate(unique_groups):
-        unique_groups[index] = clean_name(item)
-        data = go.Violin(x=df[x][df[x] == item],
-                    y=df[y][df[x] == item],
-                    showlegend=False
-                    )
-        fig.add_trace(data)
-    fig.update_traces(box_visible=True, meanline_visible=True)
-    fig.update_layout(
-        height=300 * n_rows,
-        title=f"Violin Plot of {titles['y']} by {titles['x']}",
-        showlegend=False
-    )
-    fig.update_xaxes(title_text=titles['x'])
-    fig.update_yaxes(title_text=titles['y'])
+    fig = None
+    if mode == "B":
+        titles = clean_titles_dictionary(titles)
+        fig = px.scatter(df, 
+                        x=x,
+                        y=y,  
+                        color_discrete_sequence=px.colors.qualitative.Set2)
+        title = f"The Distribution of {titles['y']} by {titles['x']}"
 
-    fig.show()
-
-def univariate_violin_plots(df, x, n_rows: int = 2, n_cols: int = 1):
-    titles = {"x": x}
-    titles = clean_titles_dictionary(titles)
-    fig = go.Figure() 
-    data = go.Violin(x=df[x],
-                    showlegend=False
-                    )
-    fig.add_trace(data)
-    fig.update_traces(box_visible=True, meanline_visible=True)
-    fig.update_layout(
-        height=300 * n_rows,
-        title=f"Violin Plot of {titles['x']}",
-        showlegend=False
-    )
-    fig.update_xaxes(ticktext=titles['x'])
-
-    fig.show()
-    
-def univariate_count_plots(df, x, n_rows: int = 2, n_cols: int = 1):
-    titles = {"x": x}
-    titles = clean_titles_dictionary(titles)
-
-    fig = px.histogram(df, x=x, text_auto=True)
-    fig.update_traces(hovertemplate='<b>%{x}</b><br>Frequency = %{y}<extra></extra>')
-    fig.update_layout(
-        height=300 * n_rows,
-        title=f"Count Plot of {titles['x']}",
-        showlegend=False,
-        bargap=0.2
-    )
-    fig.update_xaxes(title_text=titles['x'])
-    fig.update_yaxes(title_text='Frequency')
-    fig.show()
-    
-def show_grouped_scatter(df, x, y, group_by, n_cols=2):
-    
-    titles = {"x": x, "y": y, "group_by": group_by}
-    titles = clean_titles_dictionary(titles)
-    
-    unique_groups = df[group_by].unique()
-    n_rows = count_rows(n_groups=len(unique_groups))
-    
-    fig = create_subplots(unique_groups=unique_groups,
-                          groups=titles['group_by'],
-                          n_rows=n_rows)
-
-    
-    for i, group in enumerate(unique_groups):
-        row = i // n_cols + 1
-        col = i % n_cols + 1
+    elif mode == "M":
+        titles.update({"z": z})
+        titles = clean_titles_dictionary(titles)
+        fig = px.scatter(df, 
+                        x=x,
+                        y=y,
+                        color=z,
+                        color_discrete_sequence=px.colors.qualitative.Set2)
+        title = f"The Distribution of {titles['y']} by {titles['x']} Separated by {titles['z']}"
         
-        group_data = df[df[group_by] == group]
-        
-        fig.add_trace(
-            go.Scatter(
-                x=group_data[x],
-                y=group_data[y],
-                mode='markers',
-                name=str(clean_name(group)),
-                showlegend=False
-            ),
-            row=row, 
-            col=col
-        )
-    
     fig.update_layout(
-        height=300 * n_rows,
-        title=f"Scatter Plots of {titles['y']} vs {titles['x']} by {titles['group_by']}",
-        showlegend=False
+        height=600,
+        title=title,
+        showlegend=True
     )
-    
     fig.update_xaxes(title_text=titles['x'])
-    fig.update_yaxes(title_text=titles['y'])
+    fig.update_yaxes(title_text=titles['y'] if mode != "U" else titles['x'])
+    return fig
     
-    fig.show()
-
 #endregion
 
 def univariate_analysis(df):
-    #show_grouped_histograms(df, 'Soil_type', 'Crop_type')
-    """
-    univariate_violin_plots(df, 'Standard_yield')
-    univariate_violin_plots(df, 'Annual_yield')
-    univariate_violin_plots(df, 'Min_temperature_C')
-    univariate_violin_plots(df, 'Max_temperature_C')
-    univariate_violin_plots(df, 'Temperature')
-    univariate_violin_plots(df, 'pH')
-    univariate_violin_plots(df, 'Rainfall')
-    univariate_violin_plots(df, 'Soil_fertility')
-    univariate_violin_plots(df, 'Slope')"""
-    univariate_count_plots(df, 'Location')
-    univariate_count_plots(df, 'Weather_station')
-    univariate_count_plots(df, 'Crop_type')
-    univariate_count_plots(df, 'Soil_type')
+    figure_list = []
+    # Numerical features
+    figure_list.append(violin_plots(df, "U", "Elevation"))
+    figure_list.append(violin_plots(df, "U", "Latitude"))
+    figure_list.append(violin_plots(df, "U", "Longitude"))
+    figure_list.append(violin_plots(df, "U", "Slope"))
+    figure_list.append(violin_plots(df, "U", "Rainfall"))
+    figure_list.append(violin_plots(df, "U", "Min_temperature_C"))
+    figure_list.append(violin_plots(df, "U", "Max_temperature_C"))
+    figure_list.append(violin_plots(df, "U", "Temperature"))
+    figure_list.append(violin_plots(df, "U", "Soil_fertility"))
+    figure_list.append(violin_plots(df, "U", "pH"))
+    figure_list.append(violin_plots(df, "U", "Pollution_level"))
+    figure_list.append(violin_plots(df, "U", "Plot_size"))
+    figure_list.append(violin_plots(df, "U", "Annual_yield"))
+    figure_list.append(violin_plots(df, "U", "Standard_yield"))
+
+    # Categorical features
+    figure_list.append(count_plots(df, "U", "Location"))
+    figure_list.append(count_plots(df, "U", "Soil_type"))
+    figure_list.append(count_plots(df, "U", "Crop_type"))
+    figure_list.append(count_plots(df, "U", "Weather_station"))
+    
+    for fig in figure_list:
+        fig.show()
 
 def bivariate_analysis(df):
-    bivariate_violin_plots(df, 'Crop_type', 'Pollution_level')
-    bivariate_violin_plots(df, 'Soil_type', 'Pollution_level')
-    #show_grouped_scatter(df, 'Min_temperature_C', 'Standard_yield', 'Crop_type')
-    #show_grouped_scatter(df, 'Max_temperature_C', 'Standard_yield', 'Crop_type')
     
-    #show_grouped_scatter(df, 'Min_temperature_C', 'Annual_yield', 'Crop_type')
-    #show_grouped_scatter(df, 'Max_temperature_C', 'Annual_yield', 'Crop_type')
+    figure_list = []
+    # TARGET VARIABLE: Annual_yield vs all numerical features
+    figure_list.append(scatter_plots(df, "B", "Elevation", "Annual_yield"))
+    figure_list.append(scatter_plots(df, "B", "Rainfall", "Annual_yield"))
+    figure_list.append(scatter_plots(df, "B", "Temperature", "Annual_yield"))
+    figure_list.append(scatter_plots(df, "B", "Soil_fertility", "Annual_yield"))
+    figure_list.append(scatter_plots(df, "B", "pH", "Annual_yield"))
+    figure_list.append(scatter_plots(df, "B", "Pollution_level", "Annual_yield"))
+    figure_list.append(scatter_plots(df, "B", "Plot_size", "Annual_yield"))
+    figure_list.append(scatter_plots(df, "B", "Min_temperature_C", "Annual_yield"))
+    figure_list.append(scatter_plots(df, "B", "Max_temperature_C", "Annual_yield"))
+    figure_list.append(scatter_plots(df, "B", "Slope", "Annual_yield"))
+    figure_list.append(scatter_plots(df, "B", "Standard_yield", "Annual_yield"))
+
+    # TARGET VARIABLE: Annual_yield vs all categorical features
+    figure_list.append(violin_plots(df, "B", "Crop_type", "Annual_yield"))
+    figure_list.append(violin_plots(df, "B", "Soil_type", "Annual_yield"))
+    figure_list.append(violin_plots(df, "B", "Location", "Annual_yield"))
+    figure_list.append(violin_plots(df, "B", "Weather_station", "Annual_yield"))
+
+    # Numerical vs Numerical relationships (key pairs)
+    figure_list.append(scatter_plots(df, "B", "Rainfall", "Temperature"))
+    figure_list.append(scatter_plots(df, "B", "Elevation", "Temperature"))
+    figure_list.append(scatter_plots(df, "B", "Soil_fertility", "pH"))
+    figure_list.append(scatter_plots(df, "B", "Pollution_level", "pH"))
+    figure_list.append(scatter_plots(df, "B", "Latitude", "Temperature"))
+    figure_list.append(scatter_plots(df, "B", "Longitude", "Rainfall"))
+
+    # Categorical vs Numerical (feature distributions)
+    figure_list.append(violin_plots(df, "B", "Crop_type", "Rainfall"))
+    figure_list.append(violin_plots(df, "B", "Crop_type", "Temperature"))
+    figure_list.append(violin_plots(df, "B", "Crop_type", "Soil_fertility"))
+    figure_list.append(violin_plots(df, "B", "Soil_type", "pH"))
+    figure_list.append(violin_plots(df, "B", "Soil_type", "Soil_fertility"))
+    figure_list.append(violin_plots(df, "B", "Location", "Elevation"))
+    figure_list.append(violin_plots(df, "B", "Location", "Rainfall"))
+
+    # Categorical vs Categorical
+    figure_list.append(count_plots(df, "B", "Crop_type", "Soil_type"))
+    figure_list.append(count_plots(df, "B", "Crop_type", "Location"))
+    figure_list.append(count_plots(df, "B", "Soil_type", "Location"))
+    figure_list.append(count_plots(df, "B", "Crop_type", "Weather_station"))
     
-    #show_grouped_scatter(df, 'Soil_type', 'Standard_yield', 'Crop_type')
-    #show_grouped_scatter(df, 'Min_temperature_C', 'Standard_yield', 'Soil_type')
-    #show_grouped_scatter(df, 'Max_temperature_C', 'Standard_yield', 'Soil_type')
+    for fig in figure_list:
+        fig.show()
+        
+def multivariate_analysis(df):
+    figure_list = []
+    # Key triplets with Annual_yield as target
+    figure_list.append(scatter_plots(df, "M", "Rainfall", "Annual_yield", "Crop_type"))
+    figure_list.append(scatter_plots(df, "M", "Temperature", "Annual_yield", "Crop_type"))
+    figure_list.append(scatter_plots(df, "M", "Soil_fertility", "Annual_yield", "Crop_type"))
+    figure_list.append(scatter_plots(df, "M", "pH", "Annual_yield", "Soil_type"))
+    figure_list.append(scatter_plots(df, "M", "Pollution_level", "Annual_yield", "Soil_type"))
+    figure_list.append(scatter_plots(df, "M", "Elevation", "Annual_yield", "Location"))
 
+    # Environmental relationships
+    figure_list.append(scatter_plots(df, "M", "Rainfall", "Temperature", "Crop_type"))
+    figure_list.append(scatter_plots(df, "M", "Elevation", "Temperature", "Location"))
+    figure_list.append(scatter_plots(df, "M", "Latitude", "Rainfall", "Crop_type"))
+    figure_list.append(scatter_plots(df, "M", "Soil_fertility", "pH", "Soil_type"))
 
+    # Multi-category distributions
+    figure_list.append(violin_plots(df, "M", "Crop_type", "Annual_yield", "Soil_type"))
+    figure_list.append(violin_plots(df, "M", "Location", "Annual_yield", "Crop_type"))
+    figure_list.append(violin_plots(df, "M", "Soil_type", "Annual_yield", "Crop_type"))
+    figure_list.append(violin_plots(df, "M", "Crop_type", "Annual_yield", "Soil_type"))
+
+    # Complex interactions
+    figure_list.append(scatter_plots(df, "M", "Rainfall", "Soil_fertility", "Crop_type"))
+    figure_list.append(scatter_plots(df, "M", "Temperature", "pH", "Soil_type"))
+    figure_list.append(scatter_plots(df, "M", "Plot_size", "Annual_yield", "Crop_type"))
+    figure_list.append(scatter_plots(df, "M", "Min_temperature_C", "Max_temperature_C", "Crop_type"))
+
+    for fig in figure_list:
+        fig.show()
+        
 def run_ttest(Column_A, Column_B):  
     from scipy import stats  
     t_statistic, p_value = stats.ttest_ind(Column_A, Column_B, equal_var=False)
