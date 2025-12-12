@@ -56,10 +56,12 @@ print(field_df.info())
 #hypothesis_results(field_df, weather_df, measurements_to_compare)
 
 #bivariate_analysis
+field_df.drop("Field_ID", axis=1, inplace=True)
 
+print(field_df.info())
 print(field_df.head())
-#univariate_analysis(field_df)
-bivariate_analysis(field_df)
+univariate_analysis(field_df)
+#bivariate_analysis(field_df)
 #multivariate_analysis(field_df)
-print(field_df.describe())
+#print(field_df.describe())
 

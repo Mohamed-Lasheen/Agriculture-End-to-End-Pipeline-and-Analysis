@@ -21,6 +21,8 @@ def create_subplots(unique_groups: list, groups: str, n_rows: int, n_cols: int=2
     return fig
 
 def clean_name(name):
+    if name == None:
+        return
     if (name.endswith("_C")):
         name = name.replace("_C", " (C)")
     return name.replace("_", " ").title()
@@ -30,6 +32,16 @@ def clean_titles_dictionary(titles):
         if value != np.float64(0.5779643636557995):
             titles[key] = clean_name(value)
     return titles
+
+def ranges(df, x, y):
+    min_x = df[x].min()
+    max_x = df[x].max()
+    range_x = (max_x - min_x) * 0.02
+    
+    min_y = df[y].min()
+    max_y = df[y].max()
+    range_y = (max_y - min_y) * 0.02
+    return min_x, max_x, range_x, min_y, max_y, range_y
 
 def count_rows(n_groups: int, n_cols: int=2):
     n_rows = (n_groups + n_cols - 1) // n_cols 

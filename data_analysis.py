@@ -3,8 +3,8 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from helper_functions import create_subplots, count_rows, clean_name, clean_titles_dictionary, filter_field_data
-
+from helper_functions import create_subplots, count_rows, clean_name, clean_titles_dictionary, filter_field_data, ranges
+from plotly.offline import plot
 
 #region Plots
 
@@ -125,86 +125,89 @@ def scatter_plots(df, mode: str = None, x: str = "", y: str = "", z: str = "", o
         showlegend=True
     )
     fig.update_xaxes(title_text=titles['x'])
-    fig.update_yaxes(title_text=titles['y'] if mode != "U" else titles['x'])
+    fig.update_yaxes(title_text=titles['y'])
     return fig
     
 #endregion
 
 def univariate_analysis(df):
-    figure_list = []
-    # Numerical features
-    figure_list.append(violin_plots(df, "U", "Elevation"))
-    figure_list.append(violin_plots(df, "U", "Latitude"))
-    figure_list.append(violin_plots(df, "U", "Longitude"))
-    figure_list.append(violin_plots(df, "U", "Slope"))
-    figure_list.append(violin_plots(df, "U", "Rainfall"))
-    figure_list.append(violin_plots(df, "U", "Min_temperature_C"))
-    figure_list.append(violin_plots(df, "U", "Max_temperature_C"))
-    figure_list.append(violin_plots(df, "U", "Temperature"))
-    figure_list.append(violin_plots(df, "U", "Soil_fertility"))
-    figure_list.append(violin_plots(df, "U", "pH"))
-    figure_list.append(violin_plots(df, "U", "Pollution_level"))
-    figure_list.append(violin_plots(df, "U", "Plot_size"))
-    figure_list.append(violin_plots(df, "U", "Annual_yield"))
-    figure_list.append(violin_plots(df, "U", "Standard_yield"))
-
-    # Categorical features
-    figure_list.append(count_plots(df, "U", "Location"))
-    figure_list.append(count_plots(df, "U", "Soil_type"))
-    figure_list.append(count_plots(df, "U", "Crop_type"))
-    figure_list.append(count_plots(df, "U", "Weather_station"))
+    numeric_cols = [col for col in df.select_dtypes(exclude='object').columns]        
+    categorical_cols = [col for col in df.select_dtypes(include='object').columns if col != 'Field_ID']
     
-    for fig in figure_list:
-        fig.show()
+    subplot_titles = [f"Distribution of {clean_name(col)}" for col in numeric_cols]
+    fig, num_subplots = setup_subplots(numeric_cols, subplot_titles)
+    
+    for i, column in enumerate(numeric_cols):
+        subplot = px.box(df, y=column, color_discrete_sequence=px.colors.qualitative.Set2)
+        for trace in subplot.data:
+            fig.add_trace(trace, row=i+1, col=1)
+        fig = figure_adjustment(fig, column, None, 'Feature Distributions', 
+                                i, num_subplots, height=850)
+
+    fig.show()
+
+    subplot_titles = [f"Distribution of {clean_name(col)}" for col in categorical_cols]
+    fig, num_subplots = setup_subplots(categorical_cols, subplot_titles)
+    
+    for i, column in enumerate(categorical_cols):
+        grouped_df = df.groupby(by=[column]).size().reset_index(name="counts")
+        subplot= px.bar(grouped_df, x=column, y="counts")    
+        for trace in subplot.data:
+            fig.add_trace(trace, row=i+1, col=1)
+        fig = figure_adjustment(fig, column, None, 'Feature Distributions', 
+                        i, num_subplots)
+        fig.update_layout(bargap=0.2)
+    fig.show()
 
 def bivariate_analysis(df):
+    numerical_column = [col for col in df.select_dtypes(exclude='object').columns]
+    categorical_column = [col for col in df.select_dtypes(include='object').columns if col != 'Field_ID']
     
-    figure_list = []
-    # TARGET VARIABLE: Annual_yield vs all numerical features
-    figure_list.append(scatter_plots(df, "B", "Elevation", "Annual_yield"))
-    figure_list.append(scatter_plots(df, "B", "Rainfall", "Annual_yield"))
-    figure_list.append(scatter_plots(df, "B", "Temperature", "Annual_yield"))
-    figure_list.append(scatter_plots(df, "B", "Soil_fertility", "Annual_yield"))
-    figure_list.append(scatter_plots(df, "B", "pH", "Annual_yield"))
-    figure_list.append(scatter_plots(df, "B", "Pollution_level", "Annual_yield"))
-    figure_list.append(scatter_plots(df, "B", "Plot_size", "Annual_yield"))
-    figure_list.append(scatter_plots(df, "B", "Min_temperature_C", "Annual_yield"))
-    figure_list.append(scatter_plots(df, "B", "Max_temperature_C", "Annual_yield"))
-    figure_list.append(scatter_plots(df, "B", "Slope", "Annual_yield"))
-    figure_list.append(scatter_plots(df, "B", "Standard_yield", "Annual_yield"))
-
-    # TARGET VARIABLE: Annual_yield vs all categorical features
-    figure_list.append(violin_plots(df, "B", "Crop_type", "Annual_yield"))
-    figure_list.append(violin_plots(df, "B", "Soil_type", "Annual_yield"))
-    figure_list.append(violin_plots(df, "B", "Location", "Annual_yield"))
-    figure_list.append(violin_plots(df, "B", "Weather_station", "Annual_yield"))
-
-    # Numerical vs Numerical relationships (key pairs)
-    figure_list.append(scatter_plots(df, "B", "Rainfall", "Temperature"))
-    figure_list.append(scatter_plots(df, "B", "Elevation", "Temperature"))
-    figure_list.append(scatter_plots(df, "B", "Soil_fertility", "pH"))
-    figure_list.append(scatter_plots(df, "B", "Pollution_level", "pH"))
-    figure_list.append(scatter_plots(df, "B", "Latitude", "Temperature"))
-    figure_list.append(scatter_plots(df, "B", "Longitude", "Rainfall"))
-
-    # Categorical vs Numerical (feature distributions)
-    figure_list.append(violin_plots(df, "B", "Crop_type", "Rainfall"))
-    figure_list.append(violin_plots(df, "B", "Crop_type", "Temperature"))
-    figure_list.append(violin_plots(df, "B", "Crop_type", "Soil_fertility"))
-    figure_list.append(violin_plots(df, "B", "Soil_type", "pH"))
-    figure_list.append(violin_plots(df, "B", "Soil_type", "Soil_fertility"))
-    figure_list.append(violin_plots(df, "B", "Location", "Elevation"))
-    figure_list.append(violin_plots(df, "B", "Location", "Rainfall"))
-
-    # Categorical vs Categorical
-    figure_list.append(count_plots(df, "B", "Crop_type", "Soil_type"))
-    figure_list.append(count_plots(df, "B", "Crop_type", "Location"))
-    figure_list.append(count_plots(df, "B", "Soil_type", "Location"))
-    figure_list.append(count_plots(df, "B", "Crop_type", "Weather_station"))
-    
-    for fig in figure_list:
+    for column in numerical_column:    
+        numeric_cols = [col for col in numerical_column if col != column]    
+        subplot_titles = [f"Distribution of {column} by {clean_name(col)}" for col in numeric_cols]
+        fig, num_subplots = setup_subplots(numeric_cols, subplot_titles)
+        
+        for i, feature in enumerate(numeric_cols):
+            subplot = px.scatter(df, x=feature, y=column, color_discrete_sequence=px.colors.qualitative.Set2)
+            for trace in subplot.data:
+                fig.add_trace(trace, row=i+1, col=1) 
+            fig = figure_adjustment(fig, feature, column, f"Distribution of {column}", i, num_subplots)
         fig.show()
         
+        subplot_titles = [f"Distribution of {column} by {clean_name(col)}" for col in categorical_cols]
+        fig, num_subplots = setup_subplots(categorical_cols, subplot_titles)
+        
+        for i, feature in enumerate(categorical_cols):
+            subplot = px.violin(df, y=column, x=feature)
+            for trace in subplot.data:
+                fig.add_trace(trace, row=i+1, col=1)
+            fig = figure_adjustment(fig, feature, column, f"Distribution of {column}", i, num_subplots)
+        fig.show()
+
+    for column in categorical_column:    
+        categorical_cols = [col for col in df.select_dtypes(include='object').columns 
+                if col != 'Field_ID']
+    
+        subplot_titles = [f"Distribution of {column} by {clean_name(col)}" for col in numeric_cols]
+        fig, num_subplots = setup_subplots(numeric_cols, subplot_titles)
+        
+        for i, feature in enumerate(numeric_cols):
+            subplot = px.scatter(df, x=feature, y=column, color_discrete_sequence=px.colors.qualitative.Set2)
+            for trace in subplot.data:
+                fig.add_trace(trace, row=i+1, col=1) 
+            fig = figure_adjustment(fig, feature, column, f"Distribution of {column}", i, num_subplots)
+        fig.show()
+        
+        subplot_titles = [f"Distribution of {column} by {clean_name(col)}" for col in categorical_cols]
+        fig, num_subplots = setup_subplots(categorical_cols, subplot_titles)
+        
+        for i, feature in enumerate(categorical_cols):
+            subplot = px.violin(df, y=column, x=feature)
+            for trace in subplot.data:
+                fig.add_trace(trace, row=i+1, col=1)
+            fig = figure_adjustment(fig, feature, column, f"Distribution of {column}", i, num_subplots)
+        fig.show()
 def multivariate_analysis(df):
     figure_list = []
     # Key triplets with Annual_yield as target
@@ -263,3 +266,27 @@ def hypothesis_results(field_df, weather_df, list_measurements_to_compare, alpha
             
             # Print results
             #print_ttest_results(station_id, measurement, p_val, alpha)
+
+def figure_adjustment(fig, x, y, plot_title, i, num_subplots, height=550, width=1000):
+    
+
+    fig.update_xaxes(title_text=clean_name(x), row=i+1, col=1)
+    fig.update_yaxes(title_text=clean_name(y), row=i+1, col=1)
+    
+  
+    fig.update_layout(
+        height=height * num_subplots,
+        width=width, 
+        title_text=plot_title,
+        showlegend=True
+    )
+    return fig
+
+def setup_subplots(columns, subplot_titles):
+    num_subplots = len(columns)
+    fig = make_subplots(
+    rows=num_subplots, 
+    cols=1,
+    subplot_titles=subplot_titles
+    )
+    return fig, num_subplots

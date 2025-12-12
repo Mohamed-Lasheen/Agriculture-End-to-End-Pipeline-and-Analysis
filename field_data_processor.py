@@ -74,7 +74,7 @@ class FieldDataProcessor:
 
     def weather_station_mapping(self):
         return read_from_web_CSV(self.weather_map_data)
-    
+            
     def process(self):
         self.ingest_sql_data()
         self.rename_columns()
@@ -82,3 +82,4 @@ class FieldDataProcessor:
         weather_map_df = self.weather_station_mapping()
         self.df = self.df.merge(weather_map_df, on='Field_ID', how='left')
         self.df = self.df.drop(columns="Unnamed: 0")
+        self.df['Weather_station'] = self.df['Weather_station'].astype('object')
